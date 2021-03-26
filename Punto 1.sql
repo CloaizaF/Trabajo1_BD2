@@ -11,11 +11,11 @@ idcamion NUMBER(8) PRIMARY KEY,
 maximacapacidadkilos NUMBER(8) NOT NULL CHECK (maximacapacidadkilos > 0)
 );
 
-DROP TABLE CERDOESCOGIDOS;
+/*DROP TABLE CERDOESCOGIDOS;
 CREATE TABLE cerdoEscogidos(
 cod NUMBER(8) PRIMARY KEY,
 pesokilos NUMBER(8) NOT NULL CHECK (pesokilos > 0)
-);
+);*/
 
 /* Caso de prueba estandar
 DELETE CERDO;
@@ -97,11 +97,13 @@ set SERVEROUTPUT on;
 
 CREATE OR REPLACE PACKAGE MI_CERDITO_FELIZ IS
   TYPE t_arreglo2 IS TABLE OF cerdo%ROWTYPE INDEX BY BINARY_INTEGER;
-  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, arreglo OUT t_arreglo2);
+  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, arreglo OUT t_arreglo2, ans_out OUT number);
+  FUNCTION main(a in number) RETURN number;
 END;
+/
 
 CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
-  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, arreglo OUT t_arreglo2)
+  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, arreglo OUT t_arreglo2, ans_out OUT number)
   IS 
     TYPE t_arreglo IS TABLE OF cerdo.PESOKILOS%TYPE INDEX BY BINARY_INTEGER;
     peso_cerdos t_arreglo;
@@ -115,11 +117,9 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
     b number(8);
     c number(8);
     d number(8);
-    index_c number(8);
+    --index_c number(8);
 
   BEGIN
-    
-    DELETE CERDOESCOGIDOS;
 
     FOR i IN (SELECT * FROM cerdo ORDER BY pesokilos ASC) LOOP
       peso_cerdos(indice_i) :=  i.pesokilos;
@@ -159,35 +159,37 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
       FOR i IN 1..peso_cerdos.COUNT  LOOP
         IF peso_cerdos(i) <= maximo_camion THEN
           ans := peso_cerdos(i);
-          index_c := i;
+          c := i;
+          d := i;
         ELSE
           EXIT;
         END IF;  
       END LOOP;
 
-      IF ans <> -1 THEN 
-        INSERT INTO cerdoEscogidos values(cerdos(index_c).COD,cerdos(index_c).pesokilos);
-      END IF;
-
-    ELSE
-      FOR i IN 1..c LOOP
-      INSERT INTO cerdoEscogidos values(cerdos(i).COD,cerdos(i).pesokilos);
-      END LOOP;
-    
-      INSERT INTO cerdoEscogidos values(cerdos(d).COD,cerdos(d).pesokilos);
-      
     END IF;
   
-    DBMS_OUTPUT.PUT_LINE('Respuesta: ' || ans);
+    arreglo := cerdos;
+    ans_out := ans;
+  END;
 
-    arreglo := pesos_cerdos;
+  FUNCTION main(a in number) return number IS
+      arreglo t_arreglo2;
+      ans NUMBER(16);
+      maximo CAMION.MAXIMACAPACIDADKILOS%TYPE := a;
+    BEGIN
+      MI_CERDITO_FELIZ.EscogerCerdos(maximo, arreglo, ans);
+      
+      FOR i in 1..arreglo.COUNT LOOP
+        DBMS_OUTPUT.PUT_LINE(arreglo(i).COD);
+      END LOOP;
+
+      RETURN ans;
   END;
 
 END; 
 /
 
-EXECUTE EscogerCerdos(29);
-
--- comentario.
--- 3 3 3 3 8
---   a   b
+BEGIN
+  DBMS_OUTPUT.PUT_LINE(MI_CERDITO_FELIZ.main(10));
+END;
+/
