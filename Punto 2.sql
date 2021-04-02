@@ -72,7 +72,7 @@ END;
 
 /
 CREATE OR REPLACE TRIGGER trigr3
-  FOR DELETE  ON individuo COMPOUND TRIGGER
+  FOR DELETE ON individuo COMPOUND TRIGGER
 -- Sección declaratica (optional)
 -- Variables se declaran durante el Trigger
 
@@ -187,3 +187,129 @@ UPDATE individuo SET codigo = 20 WHERE codigo = 19; -- Para probar el f
 DROP TRIGGER JASON.trigr3;
 
 SELECT * FROM individuo;
+
+-- b) insertar individuo con padre no nulo
+CREATE OR REPLACE TRIGGER insertar_con_padre_no_nulo
+BEFORE INSERT ON individuo
+FOR EACH ROW
+WHEN (NEW.padre IS NOT NULL)
+BEGIN
+  UPDATE individuo 
+  SET nro_hijos = nro_hijos + 1
+  WHERE codigo = :NEW.padre; 
+END;
+DROP TRIGGER CAMILO.incrementar_el_campo_valor;
+-- e) Incrementar o Decrementar el atributo valor de la tabla individuo
+CREATE OR REPLACE TRIGGER trigr7
+FOR UPDATE OF valor ON individuo COMPOUND TRIGGER
+valor_restante individuo.valor%TYPE;‬
+BEFORE EACH ROW IS
+BEGIN
+IF :NEW.valor - :OLD.valor >= 5 THEN 
+    valor_restante := :NEW.valor - :OLD.valor - 2;
+    :NEW.valor := :OLD.valor + 2;
+    DBMS_OUTPUT.PUT_LINE(valor_restante);
+END IF;
+END BEFORE EACH ROW;
+END trigr7;
+
+/*
+CREATE OR REPLACE TRIGGER trigr7
+FOR UPDATE OF valor ON individuo COMPOUND TRIGGER
+  TYPE ind_tipo IS TABLE OF individuo%ROWTYPE;
+  arr_individuo ind_tipo;
+  codigo_individuo individuo.codigo%TYPE;
+  codigo_padre individuo.codigo%TYPE;
+  valor_restante individuo.valor%TYPE;‬
+
+  BEFORE EACH ROW IS
+  BEGIN
+    IF :NEW.valor - :OLD.valor >= 5
+      THEN 
+        valor_restante := :NEW.valor - :OLD.valor - 2;
+        :NEW.valor := :OLD.valor + 2;
+    END IF;
+    codigo_padre := :OLD.codigo;
+  END BEFORE EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    SELECT * BULK COLLECT INTO arr_individuo FROM individuo WHERE padre = codigo_padre;
+    IF arr_individuo.FIRST IS NOT NULL 
+      THEN 
+        UPDATE individuo SET valor = valor + valor_restante WHERE codigo = arr_individuo(arr_individuo.FIRST).codigo;
+    END IF;
+  END AFTER STATEMENT;
+END trigr7;
+
+CREATE OR REPLACE TRIGGER incrementar_el_campo_valor 
+FOR UPDATE OF valor ON individuo COMPOUND TRIGGER
+  valor_restante individuo.valor%TYPE;‬
+
+  BEFORE EACH ROW IS
+  BEGIN
+    IF :NEW.valor - :OLD.valor >= 5
+      THEN 
+        valor_restante := :NEW.valor - :OLD.valor - 2;
+        :NEW.valor := :OLD.valor + 2;
+        DBMS_OUTPUT.PUT_LINE(valor_restante);
+    END IF;
+  END BEFORE EACH ROW;
+
+  AFTER EACH ROW IS
+  BEGIN
+  codigo_padre := :OLD.codigo;
+  SELECT * BULK COLLECT INTO arr_individuo FROM individuo WHERE padre = codigo_padre;
+  IF arr_individuo.FIRST IS NOT NULL 
+    THEN 
+      codigo_individuo := arr_individuo(arr_individuo.FIRST).codigo;
+      UPDATE individuo SET valor = valor + valor_restante WHERE codigo = codigo_individuo;
+      DBMS_OUTPUT.PUT_LINE(codigo_individuo);
+  END IF;
+  END AFTER EACH ROW;
+END incrementar_el_campo_valor;
+*/
+
+UPDATE INDIVIDUO SET valor = 30 WHERE codigo = 19;
+
+set SERVEROUTPUT on;
+
+/*
+TYPE ind_tipo IS TABLE OF individuo%ROWTYPE;
+  arr_individuo ind_tipo;
+  codigo_individuo individuo.codigo%TYPE;
+SELECT * BULK COLLECT INTO arr_individuo FROM individuo;
+      IF arr_individuo.FIRST IS NOT NULL 
+      THEN 
+        codigo_individuo := arr_individuo(arr_individuo.FIRST).codigo;
+        UPDATE individuo SET valor = valor + valor_restante WHERE codigo = codigo_individuo;
+        DBMS_OUTPUT.PUT_LINE(codigo_individuo);
+      END IF;
+*/
+
+/*
+CREATE OR REPLACE TRIGGER incrementar_el_campo_valor
+BEFORE UPDATE OF valor ON individuo
+FOR EACH ROW
+WHEN (NEW.valor > OLD.valor)
+DECLARE
+  TYPE ind_tipo IS TABLE OF individuo%ROWTYPE;
+  arr_individuo ind_tipo;
+  codigo_individuo individuo.codigo%TYPE;
+  valor_restante individuo.valor%TYPE;
+BEGIN 
+  IF :NEW.valor - :OLD.valor >= 5
+    THEN 
+      valor_restante := :NEW.valor - :OLD.valor - 2;
+      :NEW.valor := :OLD.valor + 2;
+      DBMS_OUTPUT.PUT_LINE(valor_restante);
+      SELECT * BULK COLLECT INTO arr_individuo FROM individuo;
+      IF arr_individuo.FIRST IS NOT NULL 
+      THEN 
+        codigo_individuo := arr_individuo(arr_individuo.FIRST).codigo;
+        UPDATE individuo SET valor = valor + valor_restante WHERE codigo = codigo_individuo;
+        DBMS_OUTPUT.PUT_LINE(codigo_individuo);
+      END IF;
+  END IF;
+END;
+*/
