@@ -28,12 +28,13 @@ CREATE OR REPLACE PACKAGE MI_CERDITO_FELIZ IS
   TYPE t_arreglo_cerdos IS TABLE OF CERDO%ROWTYPE INDEX BY BINARY_INTEGER;
   PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
   cerdos_escogidos OUT t_arreglo_cerdos, maximo_alcanzado OUT NUMBER);
+  PROCEDURE LlenarCamiones;
   FUNCTION Maximo(numero1 IN NUMBER, numero2 IN NUMBER) RETURN NUMBER;
 END;
 /
 
 CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
-  
+
   PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
   cerdos_escogidos OUT t_arreglo_cerdos, maximo_alcanzado OUT NUMBER)
   IS
@@ -83,6 +84,67 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
   END;
 
+  PROCEDURE LlenarCamiones
+  IS
+    salida VARCHAR2(32767) := 'Informe para Mi Cerdito.' || '||' || '-----' || '||';
+    peso_solicitado NUMBER(8);
+    peso_solicitado_aux NUMBER(8);
+    peso_enviado NUMBER(8) := 0;
+    peso_no_satisfecho NUMBER(8);
+    capacidad_camion NUMBER(8);
+    cerdos t_arreglo_cerdos;
+    cerdos_escogidos t_arreglo_cerdos;
+    peso_alcanzado NUMBER(8);
+    peso_faltante NUMBER(8);
+    indice_i NUMBER(8) ;
+  BEGIN
+    
+    peso_solicitado := 10;
+    
+ 
+
+    
+    FOR camion IN (SELECT * FROM CAMION ORDER BY MAXIMACAPACIDADKILOS DESC) LOOP
+      salida := salida || 'Camión: ' || camion.IDCAMION || '
+    ';
+      indice_i := 0;
+      FOR cerdoi IN (SELECT * FROM cerdo ORDER BY pesokilos ASC) LOOP
+        cerdos(indice_i) :=  cerdoi;
+        indice_i := indice_i + 1;
+      END LOOP;
+    
+      capacidad_camion := camion.MAXIMACAPACIDADKILOS;
+      
+      peso_faltante := peso_solicitado - peso_enviado;
+      
+      IF capacidad_camion > peso_faltante THEN
+        capacidad_camion := peso_solicitado - peso_enviado;
+        DBMS_OUTPUT.PUT_LINE('hola');
+      END IF;
+       
+      EscogerCerdos(capacidad_camion, cerdos, cerdos_escogidos, peso_alcanzado);
+        
+       salida := salida || 'Lista cerdos: ';
+        
+      FOR i IN 0..cerdos_escogidos.LAST LOOP
+        salida := salida || cerdos_escogidos(i).cod || ' (' ||  cerdos_escogidos(i).nombre
+         || ') ' ||  cerdos_escogidos(i).PESOKILOS || ', ';
+        DELETE FROM CERDO WHERE cod =  cerdos_escogidos(i).cod;
+      END LOOP;
+
+      salida := salida || '
+      ' || 'Total peso cerdos: ' || peso_alcanzado || '.' ||
+                'Capacidad no usada del camión: ' || (capacidad_camion - peso_alcanzado);
+
+      peso_enviado := peso_enviado + peso_alcanzado;
+    END LOOP;
+    
+
+    DBMS_OUTPUT.PUT_LINE(peso_solicitado);
+  
+    
+  END;
+
   FUNCTION Maximo(numero1 IN NUMBER, numero2 IN NUMBER) 
   RETURN NUMBER IS
   BEGIN 
@@ -96,22 +158,14 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 END;
 /
 
-DECLARE 
-    TYPE t_arreglo_cerdos IS TABLE OF cerdo.PESOKILOS%TYPE INDEX BY BINARY_INTEGER;
-    cerdos MI_CERDITO_FELIZ.t_arreglo_cerdos;
-    cerdos_escogidos MI_CERDITO_FELIZ.t_arreglo_cerdos;
-    maximo_alcanzado NUMBER(16);
-    indice_i NUMBER(8) := 0;
-BEGIN
-    FOR cerdoi IN (SELECT * FROM cerdo ORDER BY pesokilos ASC) LOOP
-      cerdos(indice_i) :=  cerdoi;
-      indice_i := indice_i + 1;
-    END LOOP;
-    MI_CERDITO_FELIZ.ESCOGERCERDOS(10, cerdos, cerdos_escogidos, maximo_alcanzado); 
 
-    FOR i in 0..cerdos_escogidos.LAST LOOP
-        DBMS_OUTPUT.PUT_LINE(cerdos_escogidos(i).cod);
-    END LOOP;
+
+BEGIN
+     
+    MI_CERDITO_FELIZ.LlenarCamiones; 
+
+    
 END;
 
+show errors
 -- SELECT pesokilos BULK COLLECT INTO cerdos FROM cerdo ORDER BY pesokilos; 
