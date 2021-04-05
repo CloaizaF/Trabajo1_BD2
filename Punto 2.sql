@@ -7,7 +7,7 @@ CREATE TABLE individuo(
     nro_hijos NUMBER(8) NOT NULL CHECK (nro_hijos >=0),
     CHECK(padre <> codigo)
 );
-
+DELETE INDIVIDUO
 INSERT INTO individuo VALUES(19,'Hope Sandoval',10,NULL,0);
 INSERT INTO individuo VALUES(32,'Kirsty Hawkshaw',8,NULL,0);
 INSERT INTO individuo VALUES(64,'Annabella Lwin',10	,19,0);
@@ -43,24 +43,32 @@ INSERT INTO individuo VALUES(130,'Amanda Marshall',20,32,0); -- Para probar el b
 -- c) tecer trigger si se borra un indiviuo con padre no nulo, entonces restarle al padre el hijo
 CREATE OR REPLACE TRIGGER decremento_nro_hijos
 FOR DELETE ON individuo COMPOUND TRIGGER
-
+  contador number(4) := :OLD.padre;
   numero_filas number(8) := 0;
 
   AFTER EACH ROW IS
   BEGIN
     numero_filas :=  numero_filas +1;
+    
   END AFTER EACH ROW;
 
   AFTER STATEMENT IS
-    contador number(4) := :OLD.padre;
+    
   BEGIN
+    
     IF contador IS NOT NULL THEN
-      UPDATE individuo SET nro_hijos = nro_hijos - numero_filas WHERE codigo = contador;
+        UPDATE individuo SET nro_hijos = nro_hijos - numero_filas WHERE codigo = contador;
     END IF;   
+  
   END AFTER STATEMENT;
 
 END decremento_nro_hijos;
 /
+
+DELETE FROM INDIVIDUO WHERE nombre = 'Amanda Marshall';
+
+
+
 
 -- d) cuando un individuo se borra y tiene hijos entonces a sus hijos se les pone el atributo padre = null
 CREATE OR REPLACE TRIGGER nullificacion_padre
@@ -83,7 +91,7 @@ FOR DELETE ON individuo COMPOUND TRIGGER
 END nullificacion_padre;
 /
 
-DELETE FROM individuo WHERE codigo = 19; -- Para probar el d
+
 
 -- e) el complicado
 CREATE OR REPLACE PACKAGE auxiliar_individuo IS
