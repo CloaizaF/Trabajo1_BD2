@@ -18,8 +18,8 @@ maximacapacidadkilos NUMBER(8) NOT NULL CHECK (maximacapacidadkilos > 0)
 );
 
 INSERT INTO CAMION VALUES(13, 10);
-INSERT INTO CAMION VALUES(38, 8);
-INSERT INTO CAMION VALUES(22, 7);
+INSERT INTO CAMION VALUES(38, 7);
+INSERT INTO CAMION VALUES(22, 8);
 
 
 set SERVEROUTPUT on;
@@ -60,7 +60,7 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
             ELSIF cerdos(i - 1).pesokilos <= j THEN
                 matriz(i)(j) := Maximo(cerdos(i - 1).pesokilos + matriz(i - 1)(j - cerdos(i - 1).pesokilos), 
                                         matriz(i - 1)(j));
-            ELSE 
+            ELSE
                 matriz(i)(j) := matriz(i - 1)(j);
             END IF;
         END LOOP;
@@ -87,7 +87,9 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
   PROCEDURE LlenarCamiones(peso_solicitado IN NUMBER)
   IS
-    salida VARCHAR2(32767) := 'Informe para Mi Cerdito.' || chr(13)||chr(10) || '-----';
+    TYPE t_arreglo_salida IS TABLE OF VARCHAR2(32767) INDEX BY BINARY_INTEGER;
+    contador BINARY_INTEGER := 0;
+    salida t_arreglo_salida;
     peso_enviado NUMBER(8) := 0;
     peso_no_satisfecho NUMBER(8);
     capacidad_camion camion.MAXIMACAPACIDADKILOS%TYPE;
@@ -98,9 +100,12 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
     existencia_cerdos BOOLEAN := True;
     existencia_solucion BOOLEAN := True;
     control_capacidad BOOLEAN := False;
-    indice_i NUMBER(8) ;
+    indice_i NUMBER(8);
   BEGIN
-  
+
+    salida(contador) := 'Informe para Mi Cerdito.' || chr(13)||chr(10) || '-----';
+    contador := contador + 1;
+
     FOR camion IN (SELECT * FROM CAMION ORDER BY MAXIMACAPACIDADKILOS DESC) LOOP
 
       IF control_capacidad = True THEN
@@ -133,38 +138,42 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
         EXIT;
       END IF;
 
-      salida := salida || chr(13)||chr(10) || 
-        'Camión: ' || camion.IDCAMION;
-      salida := salida || chr(13)||chr(10) || 'Lista cerdos: ';
-
+      salida(contador) := 'Camión: ' || camion.IDCAMION;
+      contador := contador + 1;
+      salida(contador) := 'Lista cerdos: ';
       FOR i IN 0..cerdos_escogidos.LAST LOOP
-        salida := salida || cerdos_escogidos(i).cod || ' (' ||  cerdos_escogidos(i).nombre
+        salida(contador) := salida(contador) || cerdos_escogidos(i).cod || ' (' ||  cerdos_escogidos(i).nombre
          || ') ' ||  cerdos_escogidos(i).PESOKILOS || 'kg';
         IF i <> cerdos_escogidos.LAST THEN
-          salida := salida || ', ';
+          salida(contador) := salida(contador) || ', ';
         END IF;
         DELETE FROM CERDO WHERE cod = cerdos_escogidos(i).cod;
       END LOOP;
-
-      salida := salida || chr(13)||chr(10) || 
-        'Total peso cerdos: ' || peso_alcanzado || 'kg. ' || 'Capacidad no usada del camión: ' 
+      contador := contador + 1;
+      salida(contador) := 'Total peso cerdos: ' || peso_alcanzado || 'kg. ' || 'Capacidad no usada del camión: ' 
         || (capacidad_camion - peso_alcanzado) || 'kg';
+      contador := contador + 1;
 
       peso_enviado := peso_enviado + peso_alcanzado;
 
     END LOOP;
 
-    IF control_capacidad = True OR (existencia_cerdos = False AND peso_enviado > 0 ) OR
+    IF (control_capacidad = True AND (existencia_cerdos = True AND existencia_solucion = True)) OR
+          (existencia_cerdos = False AND peso_enviado > 0 ) OR
           (existencia_solucion = False AND peso_enviado > 0) THEN
       peso_no_satisfecho := peso_solicitado - peso_enviado;
-      salida := salida || chr(13)||chr(10) ||
-       '-----' || chr(13)||chr(10) || 'Total Peso solicitado: ' || peso_solicitado || 'kg. Peso real enviado: ' 
+      salida(contador) := '-----';
+      contador := contador + 1;
+      salida(contador) := 'Total Peso solicitado: ' || peso_solicitado || 'kg. Peso real enviado: ' 
         || peso_enviado || 'kg. Peso no satisfecho: ' || peso_no_satisfecho || 'kg.';
     ELSE
-      salida := 'El pedido no se puede satisfacer';
+      salida.DELETE;
+      salida(0) := 'El pedido no se puede satisfacer';
     END IF;
 
-    DBMS_OUTPUT.PUT_LINE(salida);
+    FOR i IN 0..salida.LAST LOOP
+      DBMS_OUTPUT.PUT_LINE(salida(i));
+    END LOOP;
 
   END;
 
@@ -181,6 +190,4 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 END;
 /
 
-BEGIN
-    MI_CERDITO_FELIZ.LlenarCamiones(16);
-END;
+EXECUTE MI_CERDITO_FELIZ.LlenarCamiones(16);
