@@ -74,16 +74,16 @@ DELETE FROM INDIVIDUO WHERE nombre = 'Amanda Marshall';
 CREATE OR REPLACE TRIGGER nullificacion_padre
 FOR DELETE ON individuo COMPOUND TRIGGER
   
-  codInd individuo.codigo%TYPE := 0;
+  cod_ind individuo.codigo%TYPE := 0;
 
   BEFORE EACH ROW IS
   BEGIN
-    codInd := :OLD.codigo;
+    cod_ind := :OLD.codigo;
   END BEFORE EACH ROW;
 
   AFTER STATEMENT IS
   BEGIN
-    FOR ind IN (SELECT * FROM INDIVIDUO WHERE padre = codInd) LOOP
+    FOR ind IN (SELECT * FROM INDIVIDUO WHERE padre = cod_ind) LOOP
       UPDATE individuo SET padre = Null WHERE codigo = ind.codigo;
     END LOOP;
   END AFTER STATEMENT;
@@ -156,19 +156,19 @@ UPDATE INDIVIDUO SET valor = 18 WHERE codigo = 19; -- Para probar el trigger e
 -- f) cuando se actualice un código, se debe actualizar ese código también en sus hijos
 CREATE OR REPLACE TRIGGER actualizacion_codigo
 FOR UPDATE OF codigo ON individuo COMPOUND TRIGGER
-  oldCod individuo.codigo%TYPE;
-  newCod individuo.codigo%TYPE;
+  old_cod individuo.codigo%TYPE;
+  new_cod individuo.codigo%TYPE;
 
   BEFORE EACH ROW IS
   BEGIN
-    oldCod := :OLD.codigo;
-    newCod := :NEW.codigo;
+    old_cod := :OLD.codigo;
+    new_cod := :NEW.codigo;
   END BEFORE EACH ROW;
 
   AFTER STATEMENT IS
   BEGIN
-    FOR ind IN (SELECT * FROM INDIVIDUO WHERE padre = oldCod) LOOP
-      UPDATE individuo SET padre = newCod WHERE codigo = ind.codigo;
+    FOR ind IN (SELECT * FROM INDIVIDUO WHERE padre = old_cod) LOOP
+      UPDATE individuo SET padre = new_cod WHERE codigo = ind.codigo;
     END LOOP;
   END AFTER STATEMENT;
 END actualizacion_codigo;
