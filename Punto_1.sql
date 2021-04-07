@@ -5,37 +5,26 @@ nombre VARCHAR(20) NOT NULL,
 pesokilos NUMBER(8) NOT NULL CHECK (pesokilos > 0)
 );
 
-INSERT INTO CERDO VALUES(2, 'Ana Criado', 3);
-INSERT INTO CERDO VALUES(4, 'Dua Lipa', 3);
-INSERT INTO CERDO VALUES(8, 'Saffron', 3);
-INSERT INTO CERDO VALUES(11, 'Ava Max', 3);
-INSERT INTO CERDO VALUES(15, 'Esthero', 8);
-
 DROP TABLE CAMION;
 CREATE TABLE camion(
 idcamion NUMBER(8) PRIMARY KEY,
 maximacapacidadkilos NUMBER(8) NOT NULL CHECK (maximacapacidadkilos > 0)
 );
 
-INSERT INTO CAMION VALUES(13, 10);
-INSERT INTO CAMION VALUES(38, 7);
-INSERT INTO CAMION VALUES(22, 8);
-
-
 set SERVEROUTPUT on;
 
 CREATE OR REPLACE PACKAGE MI_CERDITO_FELIZ IS
   TYPE t_arreglo_cerdos IS TABLE OF CERDO%ROWTYPE INDEX BY BINARY_INTEGER;
-  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
+  PROCEDURE escoger_cerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
   cerdos_escogidos OUT t_arreglo_cerdos, maximo_alcanzado OUT NUMBER);
-  PROCEDURE LlenarCamiones(peso_solicitado IN NUMBER);
-  FUNCTION Maximo(numero1 IN NUMBER, numero2 IN NUMBER) RETURN NUMBER;
+  PROCEDURE llenar_camiones(peso_solicitado IN NUMBER);
+  FUNCTION maximo(numero1 IN NUMBER, numero2 IN NUMBER) RETURN NUMBER;
 END;
 /
 
 CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
-  PROCEDURE EscogerCerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
+  PROCEDURE escoger_cerdos(maximo_camion IN camion.maximacapacidadkilos%TYPE, cerdos IN t_arreglo_cerdos, 
   cerdos_escogidos OUT t_arreglo_cerdos, maximo_alcanzado OUT NUMBER)
   IS
     TYPE t_arreglo IS TABLE OF NUMBER(32) INDEX BY BINARY_INTEGER;
@@ -58,7 +47,7 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
             IF i = 0 OR j = 0 THEN
                 matriz(i)(j) := 0;
             ELSIF cerdos(i - 1).pesokilos <= j THEN
-                matriz(i)(j) := Maximo(cerdos(i - 1).pesokilos + matriz(i - 1)(j - cerdos(i - 1).pesokilos), 
+                matriz(i)(j) := maximo(cerdos(i - 1).pesokilos + matriz(i - 1)(j - cerdos(i - 1).pesokilos), 
                                         matriz(i - 1)(j));
             ELSE
                 matriz(i)(j) := matriz(i - 1)(j);
@@ -85,7 +74,7 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
   END;
 
-  PROCEDURE LlenarCamiones(peso_solicitado IN NUMBER)
+  PROCEDURE llenar_camiones(peso_solicitado IN NUMBER)
   IS
     TYPE t_arreglo_salida IS TABLE OF VARCHAR2(32767) INDEX BY BINARY_INTEGER;
     contador BINARY_INTEGER := 0;
@@ -97,6 +86,7 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
     cerdos_escogidos t_arreglo_cerdos;
     peso_alcanzado NUMBER(8);
     peso_faltante camion.MAXIMACAPACIDADKILOS%TYPE := 0;
+    cantidad_camiones NUMBER(8) := 0;
     existencia_cerdos BOOLEAN := True;
     existencia_solucion BOOLEAN := True;
     control_capacidad BOOLEAN := False;
@@ -105,6 +95,8 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
     salida(contador) := 'Informe para Mi Cerdito.' || chr(13)||chr(10) || '-----';
     contador := contador + 1;
+
+    SELECT COUNT(*) INTO cantidad_camiones FROM camion;
 
     FOR camion IN (SELECT * FROM CAMION ORDER BY MAXIMACAPACIDADKILOS DESC) LOOP
 
@@ -128,9 +120,9 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
       peso_faltante := peso_solicitado - peso_enviado;
       IF capacidad_camion > peso_faltante THEN
         control_capacidad := True;
-        EscogerCerdos(peso_faltante, cerdos, cerdos_escogidos, peso_alcanzado);
+        escoger_cerdos(peso_faltante, cerdos, cerdos_escogidos, peso_alcanzado);
       ELSE
-        EscogerCerdos(capacidad_camion, cerdos, cerdos_escogidos, peso_alcanzado);
+        escoger_cerdos(capacidad_camion, cerdos, cerdos_escogidos, peso_alcanzado);
       END IF;
 
       IF cerdos_escogidos.FIRST IS NULL THEN
@@ -158,9 +150,10 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
     END LOOP;
 
-    IF (control_capacidad = True AND (existencia_cerdos = True AND existencia_solucion = True)) OR
-          (existencia_cerdos = False AND peso_enviado > 0 ) OR
-          (existencia_solucion = False AND peso_enviado > 0) THEN
+    IF (cantidad_camiones > 0) AND
+        ((existencia_solucion = True AND existencia_cerdos = True) OR
+        (existencia_cerdos = False AND peso_enviado > 0 ) OR
+        (existencia_solucion = False AND peso_enviado > 0)) THEN
       peso_no_satisfecho := peso_solicitado - peso_enviado;
       salida(contador) := '-----';
       contador := contador + 1;
@@ -177,7 +170,7 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 
   END;
 
-  FUNCTION Maximo(numero1 IN NUMBER, numero2 IN NUMBER)
+  FUNCTION maximo(numero1 IN NUMBER, numero2 IN NUMBER)
   RETURN NUMBER IS
   BEGIN
     IF numero1 >= numero2 THEN
@@ -190,4 +183,5 @@ CREATE OR REPLACE PACKAGE BODY MI_CERDITO_FELIZ IS
 END;
 /
 
-EXECUTE MI_CERDITO_FELIZ.LlenarCamiones(16);
+-- Para ejecutar:
+-- EXECUTE MI_CERDITO_FELIZ.llenar_camiones(*peso solicitado*);

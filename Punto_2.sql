@@ -7,14 +7,6 @@ CREATE TABLE individuo(
     nro_hijos NUMBER(8) NOT NULL CHECK (nro_hijos >=0),
     CHECK(padre <> codigo)
 );
-DELETE INDIVIDUO
-INSERT INTO individuo VALUES(19,'Hope Sandoval',10,NULL,0);
-INSERT INTO individuo VALUES(32,'Kirsty Hawkshaw',8,NULL,0);
-INSERT INTO individuo VALUES(64,'Annabella Lwin',10	,19,0);
-INSERT INTO individuo VALUES(123,'Amanda Marshall',20,19,0);
-INSERT INTO individuo VALUES(122,'Amanda Marshall',20,19,0);
-INSERT INTO individuo VALUES(124,'Amanda Marshall',31,19,0);
-INSERT INTO individuo VALUES(125,'Amanda Marshall',32,19,0);
 
 --- a) nr0_hijos debe ser igual a 0
 CREATE OR REPLACE TRIGGER restriccion_nro_hijos
@@ -37,10 +29,9 @@ BEGIN
   SET nro_hijos = nro_hijos + 1
   WHERE codigo = :NEW.padre;
 END;
+/
 
-INSERT INTO individuo VALUES(130,'Amanda Marshall',20,32,0); -- Para probar el b
-
--- c) tecer trigger si se borra un indiviuo con padre no nulo, entonces restarle al padre el hijo
+-- c) si se borra un indiviuo con padre no nulo, entonces restarle al padre el hijo
 CREATE OR REPLACE TRIGGER decremento_nro_hijos
 FOR DELETE ON individuo COMPOUND TRIGGER
   contador number(4) := :OLD.padre;
@@ -49,26 +40,16 @@ FOR DELETE ON individuo COMPOUND TRIGGER
   AFTER EACH ROW IS
   BEGIN
     numero_filas :=  numero_filas +1;
-    
   END AFTER EACH ROW;
 
   AFTER STATEMENT IS
-    
-  BEGIN
-    
+  BEGIN    
     IF contador IS NOT NULL THEN
-        UPDATE individuo SET nro_hijos = nro_hijos - numero_filas WHERE codigo = contador;
-    END IF;   
-  
+      UPDATE individuo SET nro_hijos = nro_hijos - numero_filas WHERE codigo = contador;
+    END IF;
   END AFTER STATEMENT;
-
 END decremento_nro_hijos;
 /
-
-DELETE FROM INDIVIDUO WHERE nombre = 'Amanda Marshall';
-
-
-
 
 -- d) cuando un individuo se borra y tiene hijos entonces a sus hijos se les pone el atributo padre = null
 CREATE OR REPLACE TRIGGER nullificacion_padre
@@ -91,9 +72,7 @@ FOR DELETE ON individuo COMPOUND TRIGGER
 END nullificacion_padre;
 /
 
-
-
--- e) el complicado
+-- e) incremento del campo valor de la tabla individuo
 CREATE OR REPLACE PACKAGE auxiliar_individuo IS
   trigger_activado BOOLEAN := False;
   PROCEDURE cambiar_estado_trigger;
@@ -110,6 +89,7 @@ CREATE OR REPLACE PACKAGE BODY auxiliar_individuo IS
     END IF;
   END;
 END;
+/
 
 CREATE OR REPLACE TRIGGER incrementar_el_campo_valor 
 FOR UPDATE OF valor ON individuo COMPOUND TRIGGER
@@ -150,8 +130,7 @@ FOR UPDATE OF valor ON individuo COMPOUND TRIGGER
   END AFTER STATEMENT;
 
 END incrementar_el_campo_valor;
-
-UPDATE INDIVIDUO SET valor = 18 WHERE codigo = 19; -- Para probar el trigger e
+/
 
 -- f) cuando se actualice un código, se debe actualizar ese código también en sus hijos
 CREATE OR REPLACE TRIGGER actualizacion_codigo
@@ -172,5 +151,4 @@ FOR UPDATE OF codigo ON individuo COMPOUND TRIGGER
     END LOOP;
   END AFTER STATEMENT;
 END actualizacion_codigo;
-
-UPDATE individuo SET codigo = 20 WHERE codigo = 19; -- Para probar el f
+/
